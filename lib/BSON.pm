@@ -9,7 +9,7 @@ use base 'Exporter';
 our @EXPORT_OK = qw/encode decode/;
 
 use version;
-our $VERSION = 'v1.12.3';
+our $VERSION = 'v1.12.3.1';
 
 use Carp;
 use Config;
@@ -537,6 +537,23 @@ sub perl_to_extjson {
         )
     ) {
         return $data;
+    }
+
+    if (ref $data eq 'Tie::IxHash') {
+        my %data2 = ();
+        for my $key ($data->Keys) {
+            my $value = $data->FETCH($key);
+            $data2{$key} = $class->perl_to_extjson($value, $options);
+        }
+        return \%data2;
+    }
+
+    if (ref $data eq 'BSON::Doc') {
+        my %data2 = ();
+        for (my $i=0; $i < @$data; $i+=2) {
+            $data2{  $data->[$i] } = $class->perl_to_extjson( $data->[$i+1], $options);
+        }
+        return \%data2;
     }
 
     die sprintf "Unsupported ref value (%s)", ref($data);
